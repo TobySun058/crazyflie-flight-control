@@ -20,13 +20,11 @@ f_hover = @(PWM) A_thrust * PWM.^2 + B_thrust * PWM - T_hover_total / 4;
 % Initial guess
 PWM_guess = 0.5;
 
-% Solve using fsolve
+% Solve function
 options = optimoptions('fsolve','Display','off');
 PWM_hover = fsolve(f_hover, PWM_guess, options);
 
-fprintf('Hover PWM = %.6f\n', PWM_hover);
-
-% Reduced State-spacemodel
+% Reduced State-space model
 % State: x = r_deg
 % Input: yawing moment N
 rad2deg = 180/pi;
@@ -38,10 +36,80 @@ D = 0;
 
 % LQR weights
 Q = 1;
-R = 100000000000;
+R_values = [1e8 1e9 1e10 1e11 1e12 1e13];
+R_final = 1e11;
+
+% Open-loop system for frequency response
+G = ss(A, B, C, D);
+
+% Nyquist Plot
+figure;
+hold on;
+grid on;
+title('Nyquist Plot');
+
+% Bode Plot
+figure;
+hold on;
+grid on;
+title('Bode Plot');
+
+legend_entries = cell(length(R_values),1);
+
+fprintf('Hover PWM = %.6f\n', PWM_hover);
+fprintf('\nLQR gains and margins for each R:\n');
+
+for i = 1:length(R_values)
+    R = R_values(i);
+
+    % LQR gain
+    K = lqr(A, B, Q, R);
+
+    fprintf('\nFor R = %.6e\n', R);
+    fprintf('K = %.6f\n', K);
+
+    % Transfer Function
+    L = K * G;
+
+    % Nyquist Plot
+    figure(1);
+    nyquist(L);
+
+    % Bode Plot
+    figure(2);
+    bode(L);
+
+    % Gain and phase margins
+    [GM, PM, ~ , ~] = margin(L);
+
+    if isinf(GM)
+        fprintf('Gain Margin = Inf dB\n');
+    else
+        fprintf('Gain Margin = %.6f dB\n', 20*log10(GM));
+    end
+
+    if isnan(PM)
+        fprintf('Phase Margin = Undefined\n');
+    else
+        fprintf('Phase Margin = %.6f deg\n', PM);
+    end
+
+    legend_entries{i} = sprintf('R = %.0e', R);
+end
+
+figure(1);
+legend(legend_entries, 'Location', 'best');
+
+figure(2);
+legend(legend_entries, 'Location', 'best');
+
+R = R_final;
 
 % LQR gain
 K = lqr(A, B, Q, R);
+
+fprintf('\nChosen final R:\n');
+fprintf('R_final = %.6e\n', R_final);
 
 fprintf('\nLQR gain:\n');
 fprintf('K = %.6f\n', K);
@@ -54,36 +122,19 @@ Dcl = 0;
 sys_cl = ss(Acl, Bcl, Ccl, Dcl);
 
 % Transfer Function
-G = ss(A, B, C, D);
-L = K*G;
-
-% Nyquist Plot
-figure;
-nyquist(L);
-grid on;
-title('Nyquist Plot');
-
-% Bode Plot
-figure;
-bode(L);
-grid on;
-title('Bode Plot');
-
-% Gain and phase margins
-[GM, PM, ~ , ~] = margin(L);
-fprintf('Gain Margin = %.6f dB\n', 20*log10(GM));
-fprintf('Phase Margin = %.6f deg\n', PM);
+G_final = ss(A, B, C, D);
+L_final = K * G_final;
 
 % Initial response for 100 deg/s yaw rate
 t = linspace(0,3,500)';
 x0 = 100; % 100 deg/s initial yaw rate
 
 [y,t,x] = initial(sys_cl, x0, t);
-z = x(:,1); % yaw rate state
+r_rate = x(:,1); % yaw rate state
 
 % Plot yaw rate response
 figure;
-plot(t, z, 'LineWidth',1.5);
+plot(t, r_rate, 'LineWidth',1.5);
 grid on;
 xlabel('Time (s)');
 ylabel('Yaw rate (deg/s)');
@@ -98,7 +149,7 @@ PWM_min = 0.0;
 PWM_max = 1.0;
 
 % Compute controller yaw moment command
-T_cmd = -(x * K.');
+deltaN = -(x * K.');
 
 % History of thurusts, PWM, and saturation
 T_motor_hist = zeros(length(t),4);
@@ -107,7 +158,7 @@ alpha_hist = zeros(length(t),1);
 
 for i = 1:length(t)
     [T_motor_i, PWM_i, alpha_i] = mixer_pwm_command( ...
-        T_hover_total, 0, 0, T_cmd(i), ...
+        T_hover_total, 0, 0, deltaN(i), ...
         A_thrust, B_thrust, k, l, PWM_min, PWM_max);
 
     T_motor_hist(i,:) = T_motor_i.';
@@ -117,7 +168,7 @@ end
 
 % Plot yawing moment command
 figure;
-plot(t, T_cmd, 'LineWidth', 1.5);
+plot(t, deltaN, 'LineWidth', 1.5);
 grid on;
 xlabel('Time (s)');
 ylabel('Yawing moment command (N*m)');
@@ -149,7 +200,7 @@ legend('PWM_1','PWM_2','PWM_3','PWM_4');
 
 % Estimate time to damp a 100 deg/s yaw rate
 threshold = 0.02 * abs(x0); % 2 percent band
-idx = find(abs(z) <= threshold, 1, 'first');
+idx = find(abs(r_rate) <= threshold, 1, 'first');
 
 if ~isempty(idx)
     fprintf('Estimated time to damp 100 deg/s yaw rate = %.6f s\n', t(idx));

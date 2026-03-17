@@ -17,16 +17,13 @@ f_hover = @(PWM) A_thrust * PWM.^2 + B_thrust * PWM - T_hover_total / 4;
 % Initial guess
 PWM_guess = 0.5;
 
-% Solve using fsolve
-options = optimoptions('fsolve','Display','off');
-PWM_hover = fsolve(f_hover, PWM_guess, options);
+% Solve function
+PWM_hover = fsolve(f_hover, PWM_guess);
 
-fprintf('Hover PWM = %.6f\n', PWM_hover);
-
-% Augmented State-spacemodel with integral action
+% Augmented State-space model with integral action
 A = [ 0 1 0;
-      0 0 0;
-     -1 0 0 ];
+    0 0 0;
+    -1 0 0 ];
 
 B = [0;
      1/m;
@@ -37,17 +34,84 @@ B_2 = [0;
        1];
 
 C = [1 0 0];
+
 D = 0;
 
 % LQR weights
 Q = diag([10 1 15]);
-R = 1;
+R_values = [0.01 0.1 1 10 20 50 100];
+R_final = 1;
+
+% Open-loop system for frequency response
+G = ss(A, B, eye(3), zeros(3,1));
+
+% Nyquist Plot
+figure;
+hold on;
+grid on;
+title('Nyquist Plot');
+
+% Bode Plot
+figure;
+hold on;
+grid on;
+title('Bode Plot');
+
+legend_entries = cell(length(R_values),1);
+
+fprintf('\nLQR gains and margins for each R:\n');
+
+for i = 1:length(R_values)
+    R = R_values(i);
+
+    % LQR gain
+    K = lqr(A, B, Q, R);
+    k1 = K(1);
+    k2 = K(2);
+    k3 = K(3);
+
+    fprintf('\nFor R = %.6f\n', R);
+    fprintf('k1 = %.6f\n', k1);
+    fprintf('k2 = %.6f\n', k2);
+    fprintf('k3 = %.6f\n', k3);
+
+    % Transfer Function
+    L = K * G;
+
+    % Nyquist Plot
+    figure(1);
+    nyquist(L);
+    xlim([-10 2]);
+    ylim([-2 2]);
+
+    % Bode Plot
+    figure(2);
+    bode(L);
+
+    % Gain and phase margins
+    [GM, PM, ~ , ~] = margin(L);
+    fprintf('Gain Margin = %.6f dB\n', abs(20*log10(GM)));
+    fprintf('Phase Margin = %.6f deg\n', PM);
+
+    legend_entries{i} = sprintf('R = %.2g', R);
+end
+
+figure(1);
+legend(legend_entries, 'Location', 'best');
+
+figure(2);
+legend(legend_entries, 'Location', 'best');
+
+R = R_final;
 
 % LQR gain
 K = lqr(A, B, Q, R);
 k1 = K(1);
 k2 = K(2);
 k3 = K(3);
+
+fprintf('\nChosen final R:\n');
+fprintf('R_final = %.6f\n', R_final);
 
 fprintf('\nLQR gains:\n');
 fprintf('k1 = %.6f\n', k1);
@@ -62,32 +126,16 @@ Dcl = zeros(3,1);
 sys_cl = ss(Acl, Bcl, Ccl, Dcl);
 
 % Transfer Function
-G = ss(A, B, eye(3), 0);
-L = K*G;
+G_final = ss(A, B, eye(3), 0);
+L_final = K*G_final;
 
-% Nyquist Plot
-figure;
-nyquist(L);
-grid on;
-title('Nyquist Plot');
-
-% Bode Plot
-figure;
-bode(L);
-grid on;
-title('Bode Plot');
-
-% Gain and phase margins
-[GM, PM, ~ , ~] = margin(L);
-fprintf('Gain Margin = %.6f dB\n', 20*log10(GM));
-fprintf('Phase Margin = %.6f deg\n', PM);
 
 % Step response for 1m command
 t = linspace(0,5,500)';
 r = ones(size(t)); % 1 m referenc
 
-x = lsim(sys_cl, r, t);        % simulate states
-z = x(:,1);                    % altitude state
+x = lsim(sys_cl, r, t);  % simulate states
+z = x(:,1);   % altitude state
 
 % Plot altitude response
 figure;

@@ -25,8 +25,8 @@ r = deg2rad * r_deg;
 % Inputs
 syms PWM1 PWM2 PWM3 PWM4
 
-% PWM to RPM
-syms c_rpm1 c_rpm0   % RPM = c_rpm1 * PWM + c_rpm0
+% PWM to RPM constants
+syms c_rpm2 c_rpm1 c_rpm0  
 
 % Drone Inertia
 syms J11 J12 J13 J22 J23 J33
@@ -73,20 +73,21 @@ F_thrust_ENU = R_NED_to_ENU * R_Body_to_NED * F_thrust_Body;
 % Velocity in ENU
 v_ENU = [dx; dy; dz];
 
-% Convert ENU velocity to body-frame velocity
+% Convert ENU velocity to body velocity
 v_Body = R_NED_to_Body * R_ENU_to_NED * v_ENU;
 
 % Aerodynamic coefficient matrix
-K_aero_full = 1e-7 * [ -10.2506 -0.3177 -0.4332;
+K_aero_full = 1e-7 * [-10.2506 -0.3177 -0.4332;
     -0.3177 -10.2506 -0.4332;
     -7.7050 -7.7050 -7.5530 ];
 
 % PWM to RPM
-RPM1 = c_rpm1 * PWM1 + c_rpm0;
-RPM2 = c_rpm1 * PWM2 + c_rpm0;
-RPM3 = c_rpm1 * PWM3 + c_rpm0;
-RPM4 = c_rpm1 * PWM4 + c_rpm0;
+RPM1 = c_rpm2 * PWM1^2 + c_rpm1 * PWM1 + c_rpm0;
+RPM2 = c_rpm2 * PWM2^2 + c_rpm1 * PWM2 + c_rpm0;
+RPM3 = c_rpm2 * PWM3^2 + c_rpm1 * PWM3 + c_rpm0;
+RPM4 = c_rpm2 * PWM4^2 + c_rpm1 * PWM4 + c_rpm0;
 
+% Rotor speeds in RPS
 n1 = RPM1 / 60;
 n2 = RPM2 / 60;
 n3 = RPM3 / 60;
@@ -97,7 +98,7 @@ theta_dot_sum = 2*pi*(abs(n1) + abs(n2) + abs(n3) + abs(n4));
 % Aerodynamic force in body frame
 F_aero_Body = K_aero_full * theta_dot_sum * v_Body;
 
-% Rotate aerodynamic force to ENU
+% Aerodynamics force in ENU frame
 F_aero_ENU = R_NED_to_ENU * R_Body_to_NED * F_aero_Body;
 
 % Newton's 2nd Law to calculate the acceleration
@@ -175,28 +176,63 @@ J11_val = J_val(1,1); J12_val = J_val(1,2); J13_val = J_val(1,3);
 J22_val = J_val(2,2); J23_val = J_val(2,3); J33_val = J_val(3,3);
 
 % Using least square to find relationship between PWM and RPM
-PWM_data = [0; 6.25; 12.5; 18.75; 25; 31.25; 37.5; 43.25; 50; ...
-            56.25; 62.5; 68.75; 75; 81.25; 87.5; 93.75];
+PWM_percent_data = [0; 6.25; 12.5; 18.75; 25; 31.25; 37.5; 43.25; 50; 
+    56.25; 62.5; 68.75; 75; 81.25; 87.5; 93.75];
 
-RPM_data = [0; 4485; 7570; 9374; 10885; 12277; 13522; 14691; 15924; ...
-            17174; 18179; 19397; 20539; 21692; 22598; 23882];
+PWM_data = PWM_percent_data / 100;
 
+RPM_data = [0; 4485; 7570; 9374; 10885; 12277; 13522; 14691; 15924; 
+    17174; 18179; 19397; 20539; 21692; 22598; 23882];
+
+Thrust_g_data = [0; 1.6; 4.8; 7.9; 10.9; 13.9; 17.3; 21.0; 24.4; ...
+                 28.6; 32.8; 37.3; 41.7; 46.0; 51.9; 57.9];
+
+% Convert data into Newton for each motor
+Thrust_N_data = Thrust_g_data / 4 * 0.001 * 9.81; 
+
+% Plot for PWM vs. Motor Speed
 figure;
-plot(PWM_data, RPM_data, 'o-', 'LineWidth', 1.5);
+plot(PWM_data, RPM_data, 'o', 'LineWidth', 1.5);
 grid on;
-xlabel('PWM (%)');
+xlabel('PWM');
 ylabel('Motor Speed (RPM)');
 title('Motor Speed vs PWM');
+hold on;
 
+% Quadratic least-squares fit 
+A_quad = [PWM_data.^2, PWM_data, ones(size(PWM_data))];
+x_quad = (A_quad' * A_quad) \ (A_quad' * RPM_data);
 
-% Least-squares fit for RPM = c_rpm1 * PWM + c_rpm0
-A_ls = [PWM_data, ones(size(PWM_data))];
-x_ls = (A_ls' * A_ls) \ (A_ls' * RPM_d qata);
+c_rpm2_val = x_quad(1);
+c_rpm1_val = x_quad(2);
+c_rpm0_val = x_quad(3);
 
-c_rpm1_val = x_ls(1);
-c_rpm0_val = x_ls(2);
+RPM_fit_quad = A_quad * x_quad;
 
-disp(['RPM = ', num2str(c_rpm1_val), ' * PWM + ', num2str(c_rpm0_val)])
+% Plot quadratic fit
+figure;
+plot(PWM_data, RPM_data, 'o', 'LineWidth', 1.5); hold on;
+plot(PWM_data, RPM_fit_quad, '-', 'LineWidth', 1.5);
+grid on;
+xlabel('PWM');
+ylabel('Motor Speed (RPM)');
+title('Quadratic Least-Squares: PWM vs motor speed');
+
+% Print quadratic model
+fprintf('Quadratic least-squares model:\n');
+fprintf('RPM = %.4f * PWM^2 + %.4f * PWM + %.4f\n', c_rpm2_val, c_rpm1_val, c_rpm0_val);
+
+% Validate Assumption of PWM vs. Thrust
+T_model = A_val * PWM_data.^2 + B_val * PWM_data;
+
+% Plot
+figure;
+plot(PWM_data, Thrust_N_data, 'o', 'LineWidth', 1.5); hold on;
+plot(PWM_data, T_model, '-', 'LineWidth', 1.5);
+grid on;
+xlabel('PWM');
+ylabel('Thrust (N)');
+title('PWM-Thrust Model Validation');
 
 % Calculate PWM trim from thrust model
 T_hover = m_val * g_val / 4;
@@ -223,13 +259,13 @@ disp(PWM_trim * 65000);
 
 % Substitution
 sym_list = [m g A B k l ...
-            c_rpm1 c_rpm0 ...
+            c_rpm2 c_rpm1 c_rpm0 ...
             J11 J12 J13 J22 J23 J33 ...
             x y z dx dy dz phi_deg theta_deg psi_deg p_deg q_deg r_deg ...
             PWM1 PWM2 PWM3 PWM4];
 
 val_list = [m_val g_val A_val B_val k_val l_val ...
-            c_rpm1_val c_rpm0_val ...
+            c_rpm2_val c_rpm1_val c_rpm0_val ...
             J11_val J12_val J13_val J22_val J23_val J33_val ...
             x0 y0 z0 dx0 dy0 dz0 phi0 theta0 psi0 p0 q0 r0 ...
             U0(1) U0(2) U0(3) U0(4)];

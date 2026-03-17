@@ -1,6 +1,6 @@
 clear; clc; close all;
 
-%% Altitude Control via LQR-PI
+%% Forward Position Control via LQR-PI
 
 % Parameters
 m = 0.033;
@@ -20,12 +20,11 @@ f_hover = @(PWM) A_thrust * PWM.^2 + B_thrust * PWM - T_hover_total / 4;
 % Initial guess
 PWM_guess = 0.5;
 
-% Solve using fsolve
+% Solve function
 options = optimoptions('fsolve','Display','off');
 PWM_hover = fsolve(f_hover, PWM_guess, options);
 
-fprintf('Hover PWM = %.6f\n', PWM_hover);
-
+% Augmented State-space model with integral action
 A = [ 0 1  0  0 0;
       0 0 -g  0 0;
       0 0  0 -1 0;
@@ -45,11 +44,83 @@ B_2 = [0;
        1];
 
 C = [1 0 0 0 0];
+
 D = 0;
 
 % LQR weights
 Q = diag([10 2 50 1 20]);
-R = 1;
+R_values = [0.01 0.1 1 10 20 50 100];
+R_final = 1;
+
+% Open-loop system for frequency response
+G = ss(A, B, eye(5), zeros(5,1));
+
+% Nyquist Plot
+figure;
+hold on;
+grid on;
+title('Nyquist Plot');
+
+% Bode Plot
+figure;
+hold on;
+grid on;
+title('Bode Plot');
+
+legend_entries = cell(length(R_values),1);
+
+fprintf('Hover PWM = %.6f\n', PWM_hover);
+fprintf('\nLQR gains and margins for each R:\n');
+
+for i = 1:length(R_values)
+    R = R_values(i);
+
+    % LQR gain
+    K = lqr(A, B, Q, R);
+    k1 = K(1);
+    k2 = K(2);
+    k3 = K(3);
+    k4 = K(4);
+    k5 = K(5);
+
+    fprintf('\nFor R = %.6f\n', R);
+    fprintf('k1 = %.6f\n', k1);
+    fprintf('k2 = %.6f\n', k2);
+    fprintf('k3 = %.6f\n', k3);
+    fprintf('k4 = %.6f\n', k4);
+    fprintf('k5 = %.6f\n', k5);
+
+    % Transfer Function
+    L = K * G;
+
+    % Nyquist Plot
+    figure(1);
+    nyquist(L);
+
+    % Bode Plot
+    figure(2);
+    bode(L);
+
+    % Gain and phase margins
+    [GM, PM, ~ , ~] = margin(L);
+
+    if isinf(GM)
+        fprintf('Gain Margin = Inf dB\n');
+    else
+        fprintf('Gain Margin = %.6f dB\n', abs(20*log10(GM)));
+    end
+    fprintf('Phase Margin = %.6f deg\n', PM);
+
+    legend_entries{i} = sprintf('R = %.2g', R);
+end
+
+figure(1);
+legend(legend_entries, 'Location', 'best');
+
+figure(2);
+legend(legend_entries, 'Location', 'best');
+
+R = R_final;
 
 % LQR gain
 K = lqr(A, B, Q, R);
@@ -58,6 +129,9 @@ k2 = K(2);
 k3 = K(3);
 k4 = K(4);
 k5 = K(5);
+
+fprintf('\nChosen final R:\n');
+fprintf('R_final = %.6f\n', R_final);
 
 fprintf('\nLQR gains:\n');
 fprintf('k1 = %.6f\n', k1);
@@ -74,36 +148,19 @@ Dcl = zeros(5,1);
 sys_cl = ss(Acl, Bcl, Ccl, Dcl);
 
 % Transfer Function
-G = ss(A, B, eye(5), 0);
-L = K*G;
-
-% Nyquist Plot
-figure;
-nyquist(L);
-grid on;
-title('Nyquist Plot');
-
-% Bode Plot
-figure;
-bode(L);
-grid on;
-title('Bode Plot');
-
-% Gain and phase margins
-[GM, PM, ~ , ~] = margin(L);
-fprintf('Gain Margin = %.6f dB\n', 20*log10(GM));
-fprintf('Phase Margin = %.6f deg\n', PM);
+G_final = ss(A, B, eye(5), 0);
+L_final = K * G_final;
 
 % Step response for 1m command
 t = linspace(0,5,500)';
 r = ones(size(t)); % 1 m referenc
 
 x = lsim(sys_cl, r, t);  % simulate states
-z = x(:,1); % altitude state
+x_pos = x(:,1);   % forward position state
 
-% Plot altitude response
+% Plot forward position response
 figure;
-plot(t, z, 'LineWidth',1.5);
+plot(t, x_pos, 'LineWidth',1.5);
 grid on;
 xlabel('Time (s)');
 ylabel('Forward position x (m)');
@@ -118,8 +175,7 @@ PWM_min = 0.0;
 PWM_max = 1.0;
 
 % Compute controller thrust command
-deltaT = -(x * K.');
-T_cmd = deltaT;
+deltaM = -(x * K.');
 
 % History of thurusts, PWM, and saturation
 T_motor_hist = zeros(length(t),4);
@@ -128,7 +184,7 @@ alpha_hist = zeros(length(t),1);
 
 for i = 1:length(t)
     [T_motor_i, PWM_i, alpha_i] = mixer_pwm_command( ...
-        T_hover_total, 0, T_cmd(i), 0, ...
+        T_hover_total, 0, deltaM(i), 0, ...
         A_thrust, B_thrust, k, l, PWM_min, PWM_max);
 
     T_motor_hist(i,:) = T_motor_i.';
@@ -138,7 +194,7 @@ end
 
 % Plot total thrust command
 figure;
-plot(t, T_cmd, 'LineWidth', 1.5);
+plot(t, deltaM, 'LineWidth', 1.5);
 grid on;
 xlabel('Time (s)');
 ylabel('Pitching moment command (N*m)');
@@ -169,5 +225,5 @@ title('PWM Signal Behavior from Mixer');
 legend('PWM_1','PWM_2','PWM_3','PWM_4');
 
 % Estimate time to move forward by 1 meter
-info = stepinfo(z, t, 1);
+info = stepinfo(x_pos, t, 1);
 fprintf('Estimated settling time to reach 1 m = %.6f s\n', info.SettlingTime);
