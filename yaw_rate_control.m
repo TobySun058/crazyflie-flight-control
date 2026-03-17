@@ -8,7 +8,7 @@ g = 9.81;
 A_thrust = 0.091492681;
 B_thrust = 0.067673604;
 
-% Yaw inertia from your J matrix
+% Yaw inertia
 Jzz = 29.261652e-6;
 
 % Hover
@@ -25,8 +25,6 @@ options = optimoptions('fsolve','Display','off');
 PWM_hover = fsolve(f_hover, PWM_guess, options);
 
 % Reduced State-space model
-% State: x = r_deg
-% Input: yawing moment N
 rad2deg = 180/pi;
 
 A = 0;
@@ -36,8 +34,8 @@ D = 0;
 
 % LQR weights
 Q = 1;
-R_values = [1e8 1e9 1e10 1e11 1e12 1e13];
-R_final = 1e11;
+R_values = [1e-5 1 1e3 1e6 1e8 1e9 1e10 1e11 1e12 1e13];
+
 
 % Open-loop system for frequency response
 G = ss(A, B, C, D);
@@ -54,10 +52,8 @@ hold on;
 grid on;
 title('Bode Plot');
 
+% Legend List
 legend_entries = cell(length(R_values),1);
-
-fprintf('Hover PWM = %.6f\n', PWM_hover);
-fprintf('\nLQR gains and margins for each R:\n');
 
 for i = 1:length(R_values)
     R = R_values(i);
@@ -81,18 +77,8 @@ for i = 1:length(R_values)
 
     % Gain and phase margins
     [GM, PM, ~ , ~] = margin(L);
-
-    if isinf(GM)
-        fprintf('Gain Margin = Inf dB\n');
-    else
-        fprintf('Gain Margin = %.6f dB\n', 20*log10(GM));
-    end
-
-    if isnan(PM)
-        fprintf('Phase Margin = Undefined\n');
-    else
-        fprintf('Phase Margin = %.6f deg\n', PM);
-    end
+    fprintf('Gain Margin = %.6f dB\n', abs(20*log10(GM)));
+    fprintf('Phase Margin = %.6f deg\n', PM);
 
     legend_entries{i} = sprintf('R = %.0e', R);
 end
@@ -103,19 +89,18 @@ legend(legend_entries, 'Location', 'best');
 figure(2);
 legend(legend_entries, 'Location', 'best');
 
-R = R_final;
+R = 1e11;
 
 % LQR gain
 K = lqr(A, B, Q, R);
 
-fprintf('\nChosen final R:\n');
-fprintf('R_final = %.6e\n', R_final);
+fprintf('\n Chosen Final R = %.6e\n', R);
 
 fprintf('\nLQR gain:\n');
 fprintf('K = %.6f\n', K);
 
 % Closed-loop system
-Acl = A - B*K;
+Acl = A - B * K;
 Bcl = 0;
 Ccl = 1;
 Dcl = 0;
@@ -148,7 +133,7 @@ l = 0.046;
 PWM_min = 0.0;
 PWM_max = 1.0;
 
-% Compute controller yaw moment command
+% Yaw moment command
 deltaN = -(x * K.');
 
 % History of thurusts, PWM, and saturation
@@ -197,13 +182,3 @@ xlabel('Time (s)');
 ylabel('PWM');
 title('PWM Signal Behavior from Mixer');
 legend('PWM_1','PWM_2','PWM_3','PWM_4');
-
-% Estimate time to damp a 100 deg/s yaw rate
-threshold = 0.02 * abs(x0); % 2 percent band
-idx = find(abs(r_rate) <= threshold, 1, 'first');
-
-if ~isempty(idx)
-    fprintf('Estimated time to damp 100 deg/s yaw rate = %.6f s\n', t(idx));
-else
-    fprintf('Yaw rate did not enter the 2 percent band in the simulation window.\n');
-end

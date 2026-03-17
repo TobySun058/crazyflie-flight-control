@@ -21,17 +21,17 @@ PWM_guess = 0.5;
 PWM_hover = fsolve(f_hover, PWM_guess);
 
 % Augmented State-space model with integral action
-A = [ 0 1 0;
+A = [0 1 0;
     0 0 0;
-    -1 0 0 ];
+    -1 0 0];
 
 B = [0;
-     1/m;
-     0];
+    1/m;
+    0];
 
 B_2 = [0;
-       0;
-       1];
+    0;
+    1];
 
 C = [1 0 0];
 
@@ -39,8 +39,7 @@ D = 0;
 
 % LQR weights
 Q = diag([10 1 15]);
-R_values = [0.01 0.1 1 10 20 50 100];
-R_final = 1;
+R_values = [0.01 0.1 1 10 20 50 100 200];
 
 % Open-loop system for frequency response
 G = ss(A, B, eye(3), zeros(3,1));
@@ -102,6 +101,8 @@ legend(legend_entries, 'Location', 'best');
 figure(2);
 legend(legend_entries, 'Location', 'best');
 
+% Choose final R based on the plot comparison
+R_final = 1000;
 R = R_final;
 
 % LQR gain

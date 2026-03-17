@@ -8,7 +8,7 @@ g = 9.81;
 A_thrust = 0.091492681;
 B_thrust = 0.067673604;
 
-% Roll inertia from your J matrix
+% Roll inertia 
 Jxx = 16.571710e-6;
 
 % Hover
@@ -25,32 +25,31 @@ options = optimoptions('fsolve','Display','off');
 PWM_hover = fsolve(f_hover, PWM_guess, options);
 
 % Augmented State-space model with integral action
-A = [ 0 1 0 0 0;
-      0 0 g 0 0;
-      0 0 0 1 0;
-      0 0 0 0 0;
-     -1 0 0 0 0 ];
+A = [0 1 0 0 0;
+    0 0 g 0 0;
+    0 0 0 1 0;
+    0 0 0 0 0;
+    -1 0 0 0 0 ];
 
 B = [0;
-     0;
-     0;
-     1/Jxx;
-     0];
+    0;
+    0;
+    1/Jxx;
+    0];
 
 B_2 = [0;
-       0;
-       0;
-       0;
-       1];
+    0;
+    0;
+    0;
+    1];
 
 C = [1 0 0 0 0];
 
 D = 0;
 
 % LQR weights
-Q = diag([80 20 500 10 200]);
-R_values = [0.01 0.1 1 10 20 50 100];
-R_final = 1;
+Q = diag([20 5 40 2 30]);
+R_values = [0.1 1 10 50 100 1000 100000];
 
 % Open-loop system for frequency response
 G = ss(A, B, eye(5), zeros(5,1));
@@ -67,10 +66,8 @@ hold on;
 grid on;
 title('Bode Plot');
 
+% Legends
 legend_entries = cell(length(R_values),1);
-
-fprintf('Hover PWM = %.6f\n', PWM_hover);
-fprintf('\nLQR gains and margins for each R:\n');
 
 for i = 1:length(R_values)
     R = R_values(i);
@@ -103,12 +100,7 @@ for i = 1:length(R_values)
 
     % Gain and phase margins
     [GM, PM, ~ , ~] = margin(L);
-
-    if isinf(GM)
-        fprintf('Gain Margin = Inf dB\n');
-    else
-        fprintf('Gain Margin = %.6f dB\n', 20*log10(GM));
-    end
+    fprintf('Gain Margin = %.6f dB\n', abs(20*log10(GM)));
     fprintf('Phase Margin = %.6f deg\n', PM);
 
     legend_entries{i} = sprintf('R = %.2g', R);
@@ -120,7 +112,8 @@ legend(legend_entries, 'Location', 'best');
 figure(2);
 legend(legend_entries, 'Location', 'best');
 
-R = R_final;
+
+R = 10;
 
 % LQR gain
 K = lqr(A, B, Q, R);
@@ -130,8 +123,8 @@ k3 = K(3);
 k4 = K(4);
 k5 = K(5);
 
-fprintf('\nChosen final R:\n');
-fprintf('R_final = %.6f\n', R_final);
+
+fprintf('\n Chosen final R = %.6f\n', R);
 
 fprintf('\nLQR gains:\n');
 fprintf('k1 = %.6f\n', k1);
@@ -223,7 +216,3 @@ xlabel('Time (s)');
 ylabel('PWM');
 title('PWM Signal Behavior from Mixer');
 legend('PWM_1','PWM_2','PWM_3','PWM_4');
-
-% Estimate time to move forward by 1 meter
-info = stepinfo(y_pos, t, 1);
-fprintf('Estimated settling time to reach 1 m = %.6f s\n', info.SettlingTime);
