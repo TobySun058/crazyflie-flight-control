@@ -1,6 +1,6 @@
 clear; clc; close all;
 
-%% Altitude Control via LQR-PI
+%% Lateral Position Control via LQR-PI
 
 % Parameters
 m = 0.033;
@@ -21,12 +21,11 @@ f_hover = @(PWM) A_thrust * PWM.^2 + B_thrust * PWM - T_hover_total / 4;
 PWM_guess = 0.5;
 
 % Solve function
-options = optimoptions('fsolve','Display','off');
-PWM_hover = fsolve(f_hover, PWM_guess, options);
+PWM_hover = fsolve(f_hover, PWM_guess);
 
 % Augmented State-space model with integral action
 A = [0 1 0 0 0;
-    0 0 g 0 0;
+    0 0 g*pi/180 0 0; % Convert to Radian
     0 0 0 1 0;
     0 0 0 0 0;
     -1 0 0 0 0 ];
@@ -34,7 +33,7 @@ A = [0 1 0 0 0;
 B = [0;
     0;
     0;
-    1/Jxx;
+    (180/pi)/Jxx; % Convert to Degrees
     0];
 
 B_2 = [0;
@@ -48,8 +47,8 @@ C = [1 0 0 0 0];
 D = 0;
 
 % LQR weights
-Q = diag([20 5 40 2 30]);
-R_values = [0.1 1 10 50 100 1000 100000];
+Q = diag([20 5 30 5 20]);
+R_values = [1 1e1 1e2 1e3 1e5 1e7 1e9 1e11 1e13 1e15];
 
 % Open-loop system for frequency response
 G = ss(A, B, eye(5), zeros(5,1));
@@ -113,7 +112,7 @@ figure(2);
 legend(legend_entries, 'Location', 'best');
 
 
-R = 10;
+R = 100;
 
 % LQR gain
 K = lqr(A, B, Q, R);
@@ -145,7 +144,7 @@ G_final = ss(A, B, eye(5), 0);
 L_final = K * G_final;
 
 % Step response for 1m command
-t = linspace(0,5,500)';
+t = linspace(0,15,1500)';
 r = ones(size(t)); % 1 m referenc
 
 x = lsim(sys_cl, r, t);        % simulate states

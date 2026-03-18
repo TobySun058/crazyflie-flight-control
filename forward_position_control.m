@@ -26,7 +26,7 @@ PWM_hover = fsolve(f_hover, PWM_guess, options);
 
 % Augmented State-space model with integral action
 A = [0 1 0 0 0;
-    0 0 -g 0 0;
+    0 0 -g*pi/180 0 0;
     0 0 0 -1 0;
     0 0 0 0 0;
     -1 0 0 0 0];
@@ -34,7 +34,7 @@ A = [0 1 0 0 0;
 B = [0;
     0;
     0;
-    -1/Jyy;
+    -(180/pi)/Jyy;
     0];
 
 B_2 = [0;
@@ -48,8 +48,8 @@ C = [1 0 0 0 0];
 D = 0;
 
 % LQR weights
-Q = diag([10 2 50 1 20]);
-R_values = [0.01 0.1 1 10 20 50 100 500 1000 10000];
+Q = diag([20 5 40 5 30]);
+R_values = [1 1e2 1e4 1e6 1e8 1e10 1e12 1e14 1e16];
 
 % Open-loop system for frequency response
 G = ss(A, B, eye(5), zeros(5,1));
@@ -68,9 +68,6 @@ title('Bode Plot');
 
 legend_entries = cell(length(R_values),1);
 
-fprintf('Hover PWM = %.6f\n', PWM_hover);
-fprintf('\nLQR gains and margins for each R:\n');
-
 for i = 1:length(R_values)
     R = R_values(i);
 
@@ -82,12 +79,12 @@ for i = 1:length(R_values)
     k4 = K(4);
     k5 = K(5);
 
-    fprintf('\nFor R = %.6f\n', R);
-    fprintf('k1 = %.6f\n', k1);
-    fprintf('k2 = %.6f\n', k2);
-    fprintf('k3 = %.6f\n', k3);
-    fprintf('k4 = %.6f\n', k4);
-    fprintf('k5 = %.6f\n', k5);
+    fprintf('\nFor R = %.1f\n', R);
+    fprintf('k1 = %.10f\n', k1);
+    fprintf('k2 = %.10f\n', k2);
+    fprintf('k3 = %.10f\n', k3);
+    fprintf('k4 = %.10f\n', k4);
+    fprintf('k5 = %.10f\n', k5);
 
     % Transfer Function
     L = K * G;
@@ -95,6 +92,9 @@ for i = 1:length(R_values)
     % Nyquist Plot
     figure(1);
     nyquist(L);
+    xlim([-150 10]);
+    ylim([-20 20]);
+
 
     % Bode Plot
     figure(2);
@@ -114,24 +114,24 @@ legend(legend_entries, 'Location', 'best');
 figure(2);
 legend(legend_entries, 'Location', 'best');
 
-R = 20;
+R = 1e12;
 
 % LQR gain
 K = lqr(A, B, Q, R);
 k1 = K(1);
 k2 = K(2);
-k3 = K(3);
+k3 = K(3); 
 k4 = K(4);
 k5 = K(5);
 
-fprintf('\n Chosen Final R = %.6f\n', R_final);
+fprintf('\n Chosen Final R = %.1f\n', R);
 
 fprintf('\nLQR gains:\n');
-fprintf('k1 = %.6f\n', k1);
-fprintf('k2 = %.6f\n', k2);
-fprintf('k3 = %.6f\n', k3);
-fprintf('k4 = %.6f\n', k4);
-fprintf('k5 = %.6f\n', k5);
+fprintf('k1 = %.10f\n', k1);
+fprintf('k2 = %.10f\n', k2);
+fprintf('k3 = %.10f\n', k3);
+fprintf('k4 = %.10f\n', k4);
+fprintf('k5 = %.10f\n', k5);
 
 % Closed-loop system
 Acl = A - B*K;
@@ -145,7 +145,7 @@ G_final = ss(A, B, eye(5), 0);
 L_final = K * G_final;
 
 % Step response for 1m command
-t = linspace(0,5,500)';
+t = linspace(0,20,2000)';
 r = ones(size(t)); % 1 m reference
 
 x = lsim(sys_cl, r, t); % simulate states
@@ -197,8 +197,8 @@ title('Controller Output: Pitching Moment Command');
 figure;
 plot(t, T_motor_hist(:,1), 'LineWidth', 1.5); hold on;
 plot(t, T_motor_hist(:,2), '--', 'LineWidth', 1.2);
-plot(t, T_motor_hist(:,3), '-.', 'LineWidth', 1.2);
-plot(t, T_motor_hist(:,4), ':', 'LineWidth', 1.8);
+plot(t, T_motor_hist(:,3), 'LineWidth', 1.5);
+plot(t, T_motor_hist(:,4), '--', 'LineWidth', 1.2);
 grid on;
 xlabel('Time (s)');
 ylabel('Motor thrust (N)');
@@ -209,8 +209,8 @@ legend('T_1','T_2','T_3','T_4');
 figure;
 plot(t, PWM_hist(:,1), 'LineWidth', 1.5); hold on;
 plot(t, PWM_hist(:,2), '--', 'LineWidth', 1.2);
-plot(t, PWM_hist(:,3), '-.', 'LineWidth', 1.2);
-plot(t, PWM_hist(:,4), ':', 'LineWidth', 1.8);
+plot(t, PWM_hist(:,3), 'LineWidth', 1.5);
+plot(t, PWM_hist(:,4), '--', 'LineWidth', 1.2);
 grid on;
 xlabel('Time (s)');
 ylabel('PWM');
