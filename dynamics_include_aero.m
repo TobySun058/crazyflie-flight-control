@@ -232,7 +232,7 @@ plot(PWM_data, T_model, '-', 'LineWidth', 1.5);
 grid on;
 xlabel('PWM');
 ylabel('Thrust (N)');
-title('PWM-Thrust Model Validation');
+title('Thurst-PWM Model Validation');
 
 % Calculate PWM trim from thrust model
 T_hover = m_val * g_val / 4;

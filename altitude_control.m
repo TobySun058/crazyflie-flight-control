@@ -38,8 +38,8 @@ C = [1 0 0];
 D = 0;
 
 % LQR weights
-Q = diag([10 1 15]);
-R_values = [0.01 0.1 1 10 20 50 100 200];
+Q = diag([20 5 15]);
+R_values = [1 2 5 10 20 50 100 200 500 1000 2000 5000 10000];
 
 % Open-loop system for frequency response
 G = ss(A, B, eye(3), zeros(3,1));
@@ -80,8 +80,8 @@ for i = 1:length(R_values)
     % Nyquist Plot
     figure(1);
     nyquist(L);
-    xlim([-10 2]);
-    ylim([-2 2]);
+    xlim([-150 5]);
+    ylim([-20 20]);
 
     % Bode Plot
     figure(2);
@@ -102,8 +102,7 @@ figure(2);
 legend(legend_entries, 'Location', 'best');
 
 % Choose final R based on the plot comparison
-R_final = 1000;
-R = R_final;
+R = 1000;
 
 % LQR gain
 K = lqr(A, B, Q, R);
@@ -111,8 +110,8 @@ k1 = K(1);
 k2 = K(2);
 k3 = K(3);
 
-fprintf('\nChosen final R:\n');
-fprintf('R_final = %.6f\n', R_final);
+
+fprintf('\nChosen Final R = %.6f\n', R);
 
 fprintf('\nLQR gains:\n');
 fprintf('k1 = %.6f\n', k1);
@@ -132,7 +131,7 @@ L_final = K*G_final;
 
 
 % Step response for 1m command
-t = linspace(0,5,500)';
+t = linspace(0,10,1000)';
 r = ones(size(t)); % 1 m referenc
 
 x = lsim(sys_cl, r, t);  % simulate states

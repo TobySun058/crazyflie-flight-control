@@ -122,14 +122,14 @@ fprintf('Yaw moment: [%f, %f]\n', N_min, N_max);
 
 % Thrust vs PWM for one motor
 PWM_grid = linspace(PWM_min, PWM_max, 500);
-T_grid = A * PWM_grid.^2 + B * PWM_grid;
+T_grid = 4 * (A * PWM_grid.^2 + B * PWM_grid);
 
 figure;
 plot(PWM_grid, T_grid, 'LineWidth', 1.5);
 grid on;
 xlabel('PWM percentage');
-ylabel('Motor thrust');
-title('Motor thrust as a function of PWM percentage');
+ylabel('Total thrust');
+title('Total thrust as a function of PWM percentage');
 
 % Roll moment vs PWM
 PWM_grid = linspace(PWM_min, PWM_max, 500);
