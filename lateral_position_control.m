@@ -92,6 +92,8 @@ for i = 1:length(R_values)
     % Nyquist Plot
     figure(1);
     nyquist(L);
+    xlim([-150 10]);
+    ylim([-20 20]);
 
     % Bode Plot
     figure(2);
@@ -112,7 +114,7 @@ figure(2);
 legend(legend_entries, 'Location', 'best');
 
 
-R = 100;
+R = 1e10;
 
 % LQR gain
 K = lqr(A, B, Q, R);
@@ -126,11 +128,11 @@ k5 = K(5);
 fprintf('\n Chosen final R = %.6f\n', R);
 
 fprintf('\nLQR gains:\n');
-fprintf('k1 = %.6f\n', k1);
-fprintf('k2 = %.6f\n', k2);
-fprintf('k3 = %.6f\n', k3);
-fprintf('k4 = %.6f\n', k4);
-fprintf('k5 = %.6f\n', k5);
+fprintf('k1 = %.10f\n', k1);
+fprintf('k2 = %.10f\n', k2);
+fprintf('k3 = %.10f\n', k3);
+fprintf('k4 = %.10f\n', k4);
+fprintf('k5 = %.10f\n', k5);
 
 % Closed-loop system
 Acl = A - B*K;
@@ -143,8 +145,12 @@ sys_cl = ss(Acl, Bcl, Ccl, Dcl);
 G_final = ss(A, B, eye(5), 0);
 L_final = K * G_final;
 
+[GM, PM, ~ , ~] = margin(L_final);
+fprintf('Gain Margin = %.6f dB\n', abs(20*log10(GM)));
+fprintf('Phase Margin = %.6f deg\n', PM);
+
 % Step response for 1m command
-t = linspace(0,15,1500)';
+t = linspace(0,20,1500)';
 r = ones(size(t)); % 1 m referenc
 
 x = lsim(sys_cl, r, t);        % simulate states
@@ -196,8 +202,8 @@ title('Controller Output: Rolling Moment Command');
 figure;
 plot(t, T_motor_hist(:,1), 'LineWidth', 1.5); hold on;
 plot(t, T_motor_hist(:,2), '--', 'LineWidth', 1.2);
-plot(t, T_motor_hist(:,3), '-.', 'LineWidth', 1.2);
-plot(t, T_motor_hist(:,4), ':', 'LineWidth', 1.8);
+plot(t, T_motor_hist(:,3), 'LineWidth', 1.5);
+plot(t, T_motor_hist(:,4), '--', 'LineWidth', 1.2);
 grid on;
 xlabel('Time (s)');
 ylabel('Motor thrust (N)');
@@ -208,8 +214,8 @@ legend('T_1','T_2','T_3','T_4');
 figure;
 plot(t, PWM_hist(:,1), 'LineWidth', 1.5); hold on;
 plot(t, PWM_hist(:,2), '--', 'LineWidth', 1.2);
-plot(t, PWM_hist(:,3), '-.', 'LineWidth', 1.2);
-plot(t, PWM_hist(:,4), ':', 'LineWidth', 1.8);
+plot(t, PWM_hist(:,3), 'LineWidth', 1.5);
+plot(t, PWM_hist(:,4), '--', 'LineWidth', 1.2);
 grid on;
 xlabel('Time (s)');
 ylabel('PWM');

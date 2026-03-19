@@ -34,7 +34,7 @@ D = 0;
 
 % LQR weights
 Q = 1;
-R_values = [1e-5 1 1e3 1e6 1e8 1e9 1e10 1e11 1e12 1e13];
+R_values = [ 1 1e1 1e3 1e5 1e7 1e9 1e11 1e13 1e15 1e17 1e19];
 
 
 % Open-loop system for frequency response
@@ -62,7 +62,7 @@ for i = 1:length(R_values)
     K = lqr(A, B, Q, R);
 
     fprintf('\nFor R = %.6e\n', R);
-    fprintf('K = %.6f\n', K);
+    fprintf('K = %.10f\n', K);
 
     % Transfer Function
     L = K * G;
@@ -70,6 +70,8 @@ for i = 1:length(R_values)
     % Nyquist Plot
     figure(1);
     nyquist(L);
+    xlim([-10 2]);
+    ylim([-20 20]);
 
     % Bode Plot
     figure(2);
@@ -89,7 +91,7 @@ legend(legend_entries, 'Location', 'best');
 figure(2);
 legend(legend_entries, 'Location', 'best');
 
-R = 1e11;
+R = 1e12;
 
 % LQR gain
 K = lqr(A, B, Q, R);
@@ -97,7 +99,7 @@ K = lqr(A, B, Q, R);
 fprintf('\n Chosen Final R = %.6e\n', R);
 
 fprintf('\nLQR gain:\n');
-fprintf('K = %.6f\n', K);
+fprintf('K = %.10f\n', K);
 
 % Closed-loop system
 Acl = A - B * K;
@@ -111,7 +113,7 @@ G_final = ss(A, B, C, D);
 L_final = K * G_final;
 
 % Initial response for 100 deg/s yaw rate
-t = linspace(0,3,500)';
+t = linspace(0,10,1000)';
 x0 = 100; % 100 deg/s initial yaw rate
 
 [y,t,x] = initial(sys_cl, x0, t);
