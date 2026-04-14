@@ -154,13 +154,13 @@ mu_vel = xbar(3:4);
 plotDensity(mu_vel, P_vel, ...
     'Final Conditional Posterior Density of Velocity', 'xdot', 'ydot');
 
-% Plotting density function
+% Plot density function
 function plotDensity(mu, P, plotTitle, label1, label2)
 
     % Grid based on
     s1 = sqrt(P(1,1));
     s2 = sqrt(P(2,2));
-    
+     
     x1 = linspace(mu(1)-4*s1, mu(1)+4*s1, 100);
     x2 = linspace(mu(2)-4*s2, mu(2)+4*s2, 100);
     [X1, X2] = meshgrid(x1, x2);
@@ -168,7 +168,7 @@ function plotDensity(mu, P, plotTitle, label1, label2)
     
     % Evaluate bivariate normal pdf
     Z = mvnpdf(X, mu', P);
-    Z = reshape(Z, length(x2), length(x1));
+    Z = reshape(Z, length(x2), length(x1));  
     
     % Plot
     figure;

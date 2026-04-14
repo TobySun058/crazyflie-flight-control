@@ -12,7 +12,7 @@ L = 10 * R_min; % Straight line length
 
 chi_inf = pi/2; % Maximum approach angle
 k_path = 1 / R_min; % Rate of transition in line following
-k_orbit = 1; % Rate of transition in orbit following
+k_orbit = 1/ R_min; % Rate of transition in orbit following
 
 % Print Results
 fprintf('R_min = %.4f m\n', R_min);
@@ -60,8 +60,8 @@ quiver(X, Y, U, W, 0.6, 'LineWidth', 1);
 hold on;
 axis equal;
 grid on;
-xlabel('North (m)');
-ylabel('East (m)');
+xlabel('East (m)');
+ylabel('North (m)');
 title('Clockwise Path Following');
 
 %% Plot commanded path
@@ -138,8 +138,8 @@ quiver(X, Y, U, W, 0.6, 'LineWidth', 1);
 hold on;
 axis equal;
 grid on;
-xlabel('North (m)');
-ylabel('East (m)');
+xlabel('East (m)');
+ylabel('North (m)');
 title('Rounded-Square Path Following Simulation');
 
 % Plot straight segments
