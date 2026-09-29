@@ -35,6 +35,10 @@ flowchart LR
 │   │   └── wrench_to_pwm.m
 │   └── guidance/
 │       └── rounded_square_path_following.m
+├── hardware/
+│   └── firmware/
+│       ├── controller_pp.c
+│       └── power_distribution_force_torque.c
 ├── simulink/
 │   └── control_architecture.slx
 ├── results/
@@ -120,6 +124,10 @@ for total thrust and roll/pitch/yaw moments.
 4. clips the final PWM values to the valid actuator range.
 
 This keeps vertical thrust prioritized while preserving the direction of the requested moment vector as much as possible.
+
+## Hardware implementation
+
+The project-specific firmware logic is included under `hardware/firmware/`. The controller sends SI force/torque commands into a custom mixer path that converts the requested wrench into feasible motor PWM values. See [hardware/README.md](hardware/README.md) for source provenance and integration notes.
 
 ## Simulation and hardware validation
 
