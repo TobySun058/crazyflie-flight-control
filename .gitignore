@@ -1,40 +1,24 @@
-# Autosave files
-*.asv
-*.m~
-*.autosave
-*.slx.r*
-*.mdl.r*
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
 
-# Derived content-obscured files
-*.p
-
-# Compiled MEX files
-*.mex*
-
-# Packaged app and toolbox files
-*.mlappinstall
-*.mltbx
-
-# Deployable archives
-*.ctf
-
-# Generated helpsearch folders
-helpsearch*/
-
-# Code generation folders
+# MATLAB / Simulink generated files
 slprj/
 sccprj/
-codegen/
-
-# Cache files
 *.slxc
+*.autosave
+*.asv
+*.m~
+*.slx.bak
+*.mdl.bak
+codegen/
+*_ert_rtw/
+*_grt_rtw/
+*_rtw/
+*.mex*
 
-# Cloud based storage dotfile
-.MATLABDriveTag
-
-# buildtool cache folder
-.buildtool/
-
-# SimBiology backup files
-*.sbproj.backup
-*.sbproj.bak
+# Temporary / generated logs
+*.log
+*.tmp
