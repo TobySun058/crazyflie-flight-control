@@ -4,7 +4,7 @@ The hardware portion of this project modified the Crazyflie firmware so the cust
 
 ## Source provenance
 
-The original 666 MB course archive contains the full firmware/build environment but is too large to retrieve through the connected file interface. The two source files in this directory were therefore reconstructed from the complete code listings embedded in the submitted final report.
+The uploaded course firmware archive is now preserved in a minimal form under `upstream-template/`. Inspection shows that archive contains the starter firmware with TODO hooks rather than the final controller implementation. The project-specific files in `firmware/` are therefore still the versions reconstructed from the complete code listings embedded in the submitted final report.
 
 They are intentionally presented as **project-specific reference code**, not as a complete standalone Crazyflie firmware fork.
 
@@ -42,3 +42,10 @@ The final hardware test achieved more reasonable behavior and partial lift-off, 
 ## License note
 
 The firmware-derived allocation code is accompanied by the upstream Bitcraze GPL-3.0 license in `hardware/firmware/LICENSE-GPL-3.0.txt`.
+
+
+## Uploaded starter firmware
+
+The relevant source files from the uploaded firmware archive are kept under `upstream-template/`.
+This makes it explicit what the project started from and where the custom controller/mixer logic was added,
+without vendoring the entire Crazyflie firmware repository.
