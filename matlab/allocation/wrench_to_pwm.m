@@ -1,6 +1,6 @@
-%% Function for Mixer
+%% Wrench-to-PWM actuator allocation
 
-function [T_motor, PWM, alpha_used] = mixer_pwm_command(T_des, L_des, M_des, N_des, A, B, k, l, PWM_min, PWM_max)
+function [T_motor, PWM, alpha_used] = wrench_to_pwm(T_des, L_des, M_des, N_des, A, B, k, l, PWM_min, PWM_max)
 
 % Parameters and Limit
 l_eff = l / sqrt(2); % arm length 

@@ -13,12 +13,13 @@ sccprj/
 *.m~
 *.slx.bak
 *.mdl.bak
+*.mat
 codegen/
 *_ert_rtw/
 *_grt_rtw/
 *_rtw/
 *.mex*
 
-# Temporary / generated logs
+# Logs / temporary files
 *.log
 *.tmp
