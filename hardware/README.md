@@ -38,3 +38,7 @@ To reproduce the original firmware experiment, merge this logic into a compatibl
 The first custom-controller flight flipped immediately after takeoff. Logged allocation scale values indicated that the requested moments were too aggressive, which motivated larger LQR control penalties. Additional debugging checked Crazyflie sign/body-frame conventions and delayed x/y integral accumulation until altitude exceeded 0.15 m.
 
 The final hardware test achieved more reasonable behavior and partial lift-off, but not a stable 0.5 m hover. The repository keeps that simulation-to-hardware gap explicit.
+
+## License note
+
+The firmware-derived allocation code is accompanied by the upstream Bitcraze GPL-3.0 license in `hardware/firmware/LICENSE-GPL-3.0.txt`.
